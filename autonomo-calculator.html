@@ -201,6 +201,41 @@
             font-size: 0.95em;
         }
 
+        .input-mode-toggle {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            background: var(--bg-tertiary);
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .input-mode-toggle button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .input-mode-toggle button:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .input-mode-toggle button.active {
+            background: var(--accent-color);
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+
         .info-box {
             background: var(--info-bg);
             border-left: 4px solid var(--info-border);
@@ -505,6 +540,11 @@
 
         <div class="content">
             <div class="input-section">
+                <div class="input-mode-toggle">
+                    <button id="netModeBtn" class="active" data-lang="netModeBtn">Calcular desde Neto</button>
+                    <button id="grossModeBtn" data-lang="grossModeBtn">Calcular desde Bruto</button>
+                </div>
+
                 <div class="input-group">
                     <label for="netPay" data-lang="inputLabel">¿Cuánto quieres cobrar neto al mes?</label>
                     <div class="input-wrapper">
@@ -641,24 +681,29 @@
     </div>
 
     <script>
-        // 2025 Social Security brackets for autonomos (sistema de cotización por ingresos reales)
+        // 2025 Social Security brackets for autonomos (official bases)
+        // Quota = base mínima × 31.4% cotización rate
         const ssBrackets2025 = [
-            { min: 0, max: 670, quota: 230 },
-            { min: 670, max: 900, quota: 260 },
-            { min: 900, max: 1166.70, quota: 275 },
-            { min: 1166.70, max: 1300, quota: 291 },
-            { min: 1300, max: 1500, quota: 294 },
-            { min: 1500, max: 1700, quota: 294 },
-            { min: 1700, max: 1850, quota: 310 },
-            { min: 1850, max: 2030, quota: 315 },
-            { min: 2030, max: 2330, quota: 320 },
-            { min: 2330, max: 2760, quota: 330 },
-            { min: 2760, max: 3190, quota: 350 },
-            { min: 3190, max: 3620, quota: 370 },
-            { min: 3620, max: 4050, quota: 390 },
-            { min: 4050, max: 6000, quota: 420 },
-            { min: 6000, max: Infinity, quota: 530 }
+            // Tabla reducida
+            { min: 0, max: 670, baseMin: 653.59, baseMax: 718.94 },
+            { min: 670, max: 900, baseMin: 718.95, baseMax: 900 },
+            { min: 900, max: 1166.70, baseMin: 849.67, baseMax: 1166.70 },
+            // Tabla general
+            { min: 1166.70, max: 1300, baseMin: 950.98, baseMax: 1300 },
+            { min: 1300, max: 1500, baseMin: 960.78, baseMax: 1500 },
+            { min: 1500, max: 1700, baseMin: 960.78, baseMax: 1700 },
+            { min: 1700, max: 1850, baseMin: 1143.79, baseMax: 1850 },
+            { min: 1850, max: 2030, baseMin: 1209.15, baseMax: 2030 },
+            { min: 2030, max: 2330, baseMin: 1274.51, baseMax: 2330 },
+            { min: 2330, max: 2760, baseMin: 1356.21, baseMax: 2760 },
+            { min: 2760, max: 3190, baseMin: 1437.91, baseMax: 3190 },
+            { min: 3190, max: 3620, baseMin: 1519.61, baseMax: 3620 },
+            { min: 3620, max: 4050, baseMin: 1601.31, baseMax: 4050 },
+            { min: 4050, max: 6000, baseMin: 1732.03, baseMax: 4909.50 },
+            { min: 6000, max: Infinity, baseMin: 1928.10, baseMax: 4909.50 }
         ];
+
+        const COTIZACION_RATE = 0.314; // 31.4% for 2025
 
         // IRPF brackets 2025 (Spanish income tax)
         const irpfBrackets2025 = [
@@ -673,10 +718,12 @@
         function calculateSSQuota(monthlyIncome) {
             for (let bracket of ssBrackets2025) {
                 if (monthlyIncome >= bracket.min && monthlyIncome < bracket.max) {
-                    return bracket.quota;
+                    // Use base mínima and apply 31.4% cotización rate
+                    return bracket.baseMin * COTIZACION_RATE;
                 }
             }
-            return 530; // Maximum
+            // Maximum bracket
+            return 1928.10 * COTIZACION_RATE;
         }
 
         function calculateIRPF(taxableIncome) {
@@ -736,13 +783,13 @@
                 if (Math.abs(difference) < tolerance) {
                     // We found it!
                     return {
-                        grossMonthly: Math.round(grossMonthly),
+                        grossMonthly: grossMonthly,
                         ssMonthly: ssMonthly,
-                        irpfQuarterly: Math.round(irpfAnnual / 4),
-                        grossAnnual: Math.round(grossAnnual),
-                        ssAnnual: Math.round(ssAnnual),
-                        irpfAnnual: Math.round(irpfAnnual),
-                        netAnnual: Math.round(netAnnual),
+                        irpfQuarterly: irpfAnnual / 4,
+                        grossAnnual: grossAnnual,
+                        ssAnnual: ssAnnual,
+                        irpfAnnual: irpfAnnual,
+                        netAnnual: netAnnual,
                         effectiveRate: ((ssAnnual + irpfAnnual) / grossAnnual * 100).toFixed(1),
                         marginalRate: getMarginalRate(taxableIncome).toFixed(0)
                     };
@@ -761,8 +808,8 @@
             return new Intl.NumberFormat('es-ES', {
                 style: 'currency',
                 currency: 'EUR',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
             }).format(amount);
         }
 
@@ -784,13 +831,13 @@
                 
                 if (Math.abs(difference) < tolerance) {
                     return {
-                        grossMonthly: Math.round(grossMonthly),
+                        grossMonthly: grossMonthly,
                         ssMonthly: ssMonthly,
-                        irpfQuarterly: Math.round(irpfAnnual / 4),
-                        grossAnnual: Math.round(grossAnnual),
-                        ssAnnual: Math.round(ssAnnual),
-                        irpfAnnual: Math.round(irpfAnnual),
-                        netAnnual: Math.round(netAnnual),
+                        irpfQuarterly: irpfAnnual / 4,
+                        grossAnnual: grossAnnual,
+                        ssAnnual: ssAnnual,
+                        irpfAnnual: irpfAnnual,
+                        netAnnual: netAnnual,
                         effectiveRate: ((ssAnnual + irpfAnnual) / grossAnnual * 100).toFixed(1),
                         marginalRate: getMarginalRate(taxableIncome).toFixed(0)
                     };
@@ -804,11 +851,11 @@
         }
 
         function updateCalculation() {
-            const netPay = parseFloat(document.getElementById('netPay').value);
+            const inputValue = parseFloat(document.getElementById('netPay').value);
             const tarifaPlana = document.getElementById('tarifaPlana').checked;
             const cuotaCero = document.getElementById('cuotaCero').checked;
             
-            if (!netPay || netPay <= 0) {
+            if (!inputValue || inputValue <= 0) {
                 document.getElementById('results').style.display = 'none';
                 return;
             }
@@ -817,13 +864,28 @@
             let ssMonthly;
             let effectiveSS;
             
-            if (tarifaPlana) {
-                ssMonthly = 87;
-                effectiveSS = cuotaCero ? 0 : 87;
-                results = calculateFromNetWithSS(netPay, effectiveSS);
+            if (currentMode === 'net') {
+                // Reverse calculation: from net to gross
+                if (tarifaPlana) {
+                    ssMonthly = 87;
+                    effectiveSS = cuotaCero ? 0 : 87;
+                    results = calculateFromNetWithSS(inputValue, effectiveSS);
+                } else {
+                    results = calculateFromNet(inputValue);
+                    ssMonthly = results.ssMonthly;
+                }
             } else {
-                results = calculateFromNet(netPay);
-                ssMonthly = results.ssMonthly;
+                // Forward calculation: from gross to net
+                const grossMonthly = inputValue;
+                
+                if (tarifaPlana) {
+                    ssMonthly = 87;
+                    effectiveSS = cuotaCero ? 0 : 87;
+                    results = calculateFromGross(grossMonthly, effectiveSS);
+                } else {
+                    ssMonthly = calculateSSQuota(grossMonthly);
+                    results = calculateFromGross(grossMonthly, ssMonthly);
+                }
             }
             
             if (!results) {
@@ -831,7 +893,7 @@
                 return;
             }
 
-            const monthlyIRPF = Math.round(results.irpfAnnual / 12);
+            const monthlyIRPF = results.irpfAnnual / 12;
             const totalForHR = ssMonthly + monthlyIRPF;
 
             // Update UI
@@ -868,9 +930,13 @@
             es: {
                 title: "Calculadora Autónomo",
                 subtitle: "Calcula cuánto necesitas facturar según tu neto deseado",
+                netModeBtn: "Calcular desde Neto",
+                grossModeBtn: "Calcular desde Bruto",
                 inputLabel: "¿Cuánto quieres cobrar neto al mes?",
+                inputLabelGross: "¿Cuánto vas a facturar bruto al mes?",
                 infoTitle: "💡 ¿Cómo funciona?",
                 infoText: "Introduces el neto que quieres cobrar mensualmente y la calculadora te muestra cuánto debe enviarte la empresa cada mes para cubrir Seguridad Social e IRPF. Así puedes negociar con HR el importe exacto.",
+                infoTextGross: "Introduces el bruto que vas a facturar mensualmente y la calculadora te muestra cuánto te quedará neto después de pagar Seguridad Social e IRPF.",
                 benefitsLabel: "Beneficios Disponibles:",
                 tarifaPlanaTitle: "Tarifa Plana (Nacional)",
                 tarifaPlanaDesc: "Solo €87/mes de SS durante 12 meses (o 24 si ingresos < SMI). Aplica si eres nuevo autónomo.",
@@ -907,9 +973,13 @@
             en: {
                 title: "Self-Employed Calculator",
                 subtitle: "Calculate how much you need to invoice based on your desired net pay",
+                netModeBtn: "Calculate from Net",
+                grossModeBtn: "Calculate from Gross",
                 inputLabel: "How much do you want to take home per month?",
+                inputLabelGross: "How much will you invoice (gross) per month?",
                 infoTitle: "💡 How does it work?",
                 infoText: "Enter your desired monthly net pay and the calculator shows how much the company needs to send you each month to cover Social Security and income tax. Perfect for negotiating with HR!",
+                infoTextGross: "Enter your gross monthly invoice amount and the calculator shows how much you'll take home after Social Security and income tax.",
                 benefitsLabel: "Available Benefits:",
                 tarifaPlanaTitle: "Flat Rate (National)",
                 tarifaPlanaDesc: "Only €87/month SS for 12 months (or 24 if income < minimum wage). Applies if you're a new self-employed worker.",
@@ -947,11 +1017,52 @@
 
         let currentLang = 'es';
         let currentTheme = localStorage.getItem('theme') || 'light';
+        let currentMode = 'net'; // 'net' or 'gross'
 
         // Apply saved theme on load
         document.documentElement.setAttribute('data-theme', currentTheme);
         if (currentTheme === 'dark') {
             document.getElementById('themeToggle').textContent = '☾';
+        }
+
+        function calculateFromGross(grossMonthly, ssMonthly) {
+            // Forward calculation: from gross income to net
+            const grossAnnual = grossMonthly * 12;
+            const ssAnnual = ssMonthly * 12;
+            const taxableIncome = grossAnnual - ssAnnual;
+            const irpfAnnual = calculateIRPF(taxableIncome);
+            const netAnnual = grossAnnual - ssAnnual - irpfAnnual;
+            
+            return {
+                grossMonthly: grossMonthly,
+                ssMonthly: ssMonthly,
+                irpfQuarterly: irpfAnnual / 4,
+                grossAnnual: grossAnnual,
+                ssAnnual: ssAnnual,
+                irpfAnnual: irpfAnnual,
+                netAnnual: netAnnual,
+                effectiveRate: ((ssAnnual + irpfAnnual) / grossAnnual * 100).toFixed(1),
+                marginalRate: getMarginalRate(taxableIncome).toFixed(0)
+            };
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // Update button states
+            document.getElementById('netModeBtn').classList.toggle('active', mode === 'net');
+            document.getElementById('grossModeBtn').classList.toggle('active', mode === 'gross');
+            
+            // Update label and info text
+            const labelKey = mode === 'net' ? 'inputLabel' : 'inputLabelGross';
+            const infoKey = mode === 'net' ? 'infoText' : 'infoTextGross';
+            
+            document.querySelector('[data-lang="inputLabel"]').textContent = translations[currentLang][labelKey];
+            document.querySelector('[data-lang="infoText"]').textContent = translations[currentLang][infoKey];
+            
+            // Clear input and results
+            document.getElementById('netPay').value = '';
+            document.getElementById('results').style.display = 'none';
         }
 
         function switchLanguage() {
@@ -968,6 +1079,12 @@
                     element.textContent = translations[currentLang][key];
                 }
             });
+
+            // Update mode-specific label and info text
+            const labelKey = currentMode === 'net' ? 'inputLabel' : 'inputLabelGross';
+            const infoKey = currentMode === 'net' ? 'infoText' : 'infoTextGross';
+            document.querySelector('[data-lang="inputLabel"]').textContent = translations[currentLang][labelKey];
+            document.querySelector('[data-lang="infoText"]').textContent = translations[currentLang][infoKey];
 
             // Re-update SS display if Cuota Cero is checked
             const cuotaCero = document.getElementById('cuotaCero').checked;
@@ -986,6 +1103,8 @@
         }
 
         // Add event listeners
+        document.getElementById('netModeBtn').addEventListener('click', () => switchMode('net'));
+        document.getElementById('grossModeBtn').addEventListener('click', () => switchMode('gross'));
         document.getElementById('netPay').addEventListener('input', updateCalculation);
         document.getElementById('tarifaPlana').addEventListener('change', updateCalculation);
         document.getElementById('cuotaCero').addEventListener('change', updateCalculation);
