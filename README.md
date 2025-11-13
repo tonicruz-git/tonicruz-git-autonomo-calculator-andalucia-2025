@@ -4,6 +4,14 @@ An interactive, modern web calculator for self-employed workers (autónomos) in 
 
 **Perfect for negotiating contractor rates with companies when working as an autónomo!**
 
+# New Update
+
+🔄 Net/Gross Toggle - Calculate from either direction
+📊 Official 2025 Data - Accurate SS bases × 31.4%
+💯 Decimal Precision - All amounts show .00
+✅ Verified IRPF - Correct Andalucía rates
+📝 Updated Notes - Clarified Cuota Cero eligibility
+
 ## 🎯 What Does This Calculator Do?
 
 This tool helps you calculate the gross monthly income you need to invoice to achieve your desired net salary as a self-employed worker in Spain. It accounts for:
